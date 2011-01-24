@@ -27,6 +27,28 @@ describe ReservationService do
         disponibilities = service.find_room hotel_id, room_id, start_date, end_date
         disponibilities.should =~ result
       end
+
+      context "Habitacion no disponible en una fecha solicitada" do
+        before do
+          hotel = Hotel.first
+          room = hotel.rooms.first
+          room.disponibilities << Factory.build(:disponibility, :start_date => Date.parse('2011-01-07'), :end_date => Date.parse('2011-01-07'), :rooms => 0)
+          hotel.save
+        end
+
+        let(:result) {
+          [ { :date => Date.parse("2011-01-06"), :rooms => 2, :price => 110.0 }, 
+            { :date => Date.parse("2011-01-07"), :rooms => 0, :price => 110.0 }, 
+            { :date => Date.parse("2011-01-08"), :rooms => 2, :price => 110.0 }, 
+            { :date => Date.parse("2011-01-09"), :rooms => 2, :price => 110.0 } ]
+        }
+
+        it "debe encontrar disponibilidad solo en 3 dias" do
+          disponibilities = service.find_room hotel_id, room_id, start_date, end_date
+          disponibilities.should =~ result
+        end
+      end
+
     end
 
   end

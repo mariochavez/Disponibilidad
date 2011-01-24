@@ -2,17 +2,20 @@ class ReservationService
   def find_room hotel_id, room_id, start_date, end_date
     disponibility = look_for_disponibility hotel_id, room_id, start_date, end_date
 
+    logger = Rails.logger
+
     result = []
-    (start_date..end_date).each do |d|
-      disponibility.each do |ds|
-        if d >= ds.start_date || d <= ds.end_date
-          available = { :date => d, :rooms => ds.rooms, :price => ds.price }
-          index = index_of_entry result, d
-          if index > -1
-            result[index] = available
-          else
-            result << available
-          end
+    disponibility.each do |ds|
+      logger.debug "#{self.class} start_date: #{ds.start_date} end_date: #{ds.end_date} rooms: #{ds.rooms}"
+
+      dates = calculate_range_dates(ds, start_date, end_date)
+      (dates[0]..dates[1]).each do |d|
+        available =  { :date => d, :rooms => ds.rooms, :price => ds.price }
+        index = index_of_entry result, d
+        if index > -1
+         result[index] = available
+        else
+          result << available
         end
       end
     end
@@ -20,6 +23,10 @@ class ReservationService
   end
 
   private
+  def calculate_range_dates disponibility, start_date, end_date
+    [disponibility.start_date >= start_date ? disponibility.start_date : start_date, disponibility.end_date <= end_date ? disponibility.end_date : end_date]
+  end
+
   def index_of_entry data, date
     index = -1
     data.each_with_index do |r, i|
@@ -35,8 +42,8 @@ class ReservationService
     room = hotel.rooms.criteria.id(room_id).first
 
     disponibility = []
-    disponibility.concat(room.disponibilities.where(:start_date.gt  => start_date).documents)
-    disponibility.concat(room.disponibilities.where(:end_date.lt => end_date).documents)
+    disponibility.concat(room.disponibilities.where(:start_date.gte  => start_date).documents)
+    disponibility.concat(room.disponibilities.where(:end_date.lte => end_date).documents)
 
     disponibility
   end
